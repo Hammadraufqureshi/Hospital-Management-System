@@ -1,0 +1,288 @@
+import csv
+import tkinter as tk
+from tkinter import *
+from tkinter import messagebox
+from tkinter import ttk
+
+
+class Hospital:
+    def __init__(self, root):  # ✅ FIXED constructor
+        self.root = root
+        self.root.title("Hospital Management System")
+        self.root.geometry("1200x700")
+
+        self.nameOfTablet = StringVar()
+        self.ref = StringVar()
+        self.dose = StringVar()
+        self.noOfTablets = IntVar()
+        self.lot = StringVar()
+        self.issueDate = StringVar()
+        self.expDate = StringVar()
+        self.pDOB = StringVar()
+        self.pId = StringVar()
+        self.pName = StringVar()
+        self.age = IntVar()
+        self.sideEffects = StringVar()
+        self.pAddress = StringVar()
+        self.pPhone = StringVar()
+        self.pemail = StringVar()
+        self.nhsNo = StringVar()
+        self.bloodPressure = StringVar()
+        self.furtherInfo = StringVar()
+        self.pPostcode = StringVar()
+        self.dailyDose = StringVar()
+
+        lblTitle = Label(self.root, bd=10, relief=RIDGE, text="Hospital Management System", fg="red", bg="white",
+                         font=("Times New Roman", 30, "bold"))
+        lblTitle.pack(side=TOP, fill=X)
+
+        # Frames
+        DataFrame = Frame(self.root, bd=10, relief=RIDGE)
+        DataFrame.place(x=0, y=80, width=1180, height=300)
+
+        DataFrameLeft = LabelFrame(DataFrame, bd=8, relief=RIDGE, font="arial 12 bold", text="Patient Information")
+        DataFrameLeft.place(x=0, y=5, width=790, height=280)
+
+        DataFrameRight = LabelFrame(DataFrame, bd=8, relief=RIDGE, font="arial 12 bold", text="Prescription")
+        DataFrameRight.place(x=800, y=5, width=350, height=280)
+
+        ButtonFrame = Frame(self.root, bd=10, relief=RIDGE)
+        ButtonFrame.place(x=0, y=380, width=1180, height=60)
+
+        DetailsFrame = Frame(self.root, bd=10, relief=RIDGE)
+        DetailsFrame.place(x=0, y=450, width=1180, height=230)
+
+        # Inputs
+        lblTabletName = Label(DataFrameLeft, text="Tablet Name:", font=("arial", 12, "bold"))
+        lblTabletName.grid(row=0, column=0, sticky=W)
+        comTabletName = ttk.Combobox(DataFrameLeft, textvariable=self.nameOfTablet, state="readonly",
+                                     font=("arial", 12), width=30)
+        comTabletName['values'] = ("Nice", "Corona", "Covaxin", "Covishield", "Sinovac")
+        comTabletName.current(0)
+        comTabletName.grid(row=0, column=1)
+
+        entries = [
+            ("Reference No:", self.ref),
+            ("Dose:", self.dose),
+            ("No. of Tablets:", self.noOfTablets),
+            ("Lot:", self.lot),
+            ("Issue Date:", self.issueDate),
+            ("Exp Date:", self.expDate),
+            ("Daily Dose:", self.dailyDose),
+            ("Side Effects:", self.sideEffects),
+            ("Further Info:", self.furtherInfo),
+            ("Blood Pressure:", self.bloodPressure),
+            ("Patient ID:", self.pId),
+            ("NHS No:", self.nhsNo),
+            ("Patient Name:", self.pName),
+            ("DOB:", self.pDOB),
+            ("Age:", self.age),
+            ("Address:", self.pAddress),
+            ("Postcode:", self.pPostcode),
+            ("Phone:", self.pPhone),
+            ("Email:", self.pemail),
+        ]
+
+        for i, (label, var) in enumerate(entries, start=1):
+            lbl = Label(DataFrameLeft, text=label, font=("arial", 12, "bold"))
+            lbl.grid(row=i % 10, column=(2 if i >= 10 else 0), sticky=W)
+            ent = Entry(DataFrameLeft, textvariable=var, font=("arial", 12), width=30)
+            ent.grid(row=i % 10, column=(3 if i >= 10 else 1))
+
+        # Prescription box
+        self.txtPrprescription = Text(DataFrameRight, font=("arial", 12), width=40, height=14)
+        self.txtPrprescription.grid(row=0, column=0)
+
+        # Buttons
+        btns = [
+            ("Prescription", self.iPrescriptionData),
+            ("Report", self.fetch_data),
+            ("Update", self.update_data),
+            ("Delete", self.delete_data),
+            ("Clear", self.clear),
+            ("Exit", self.root.quit),
+        ]
+
+        for i, (text, cmd) in enumerate(btns):
+            Button(ButtonFrame, text=text, font=("arial", 12), bg="green", fg="white",
+                   width=18, command=cmd).grid(row=0, column=i, padx=3)
+
+        # Table
+        scroll_x = ttk.Scrollbar(DetailsFrame, orient=HORIZONTAL)
+        scroll_y = ttk.Scrollbar(DetailsFrame, orient=VERTICAL)
+
+        self.hospital_table = ttk.Treeview(DetailsFrame,
+                                           columns=(
+                                               "Tablet", "Ref", "NoOfTablets", "Dose", "Lot", "IssueDate", "ExpDate",
+                                               "DailyDose", "SideEffects", "FurtherInfo", "BP", "PID", "NHS",
+                                               "Name", "DOB", "Age", "Address", "Postcode", "Phone", "Email"),
+                                           xscrollcommand=scroll_x.set, yscrollcommand=scroll_y.set)
+        scroll_x.pack(side=BOTTOM, fill=X)
+        scroll_y.pack(side=RIGHT, fill=Y)
+        scroll_x.config(command=self.hospital_table.xview)
+        scroll_y.config(command=self.hospital_table.yview)
+
+        for col in self.hospital_table["columns"]:
+            self.hospital_table.heading(col, text=col)
+            self.hospital_table.column(col, width=100)
+        self.hospital_table["show"] = "headings"
+        self.hospital_table.pack(fill=BOTH, expand=1)
+        self.hospital_table.bind("<Double-1>", self.on_item_double_click)
+        self.fetch_data()
+
+    def iPrescriptionData(self):
+        if self.nameOfTablet.get() == "" or self.ref.get() == "":
+            messagebox.showerror("Error", "Please fill all fields", parent=self.root)
+        else:
+            with open('hospital_data.csv', mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([
+                    self.nameOfTablet.get(),
+                    self.ref.get(),
+                    self.noOfTablets.get(),
+                    self.dose.get(),
+                    self.lot.get(),
+                    self.issueDate.get(),
+                    self.expDate.get(),
+                    self.dailyDose.get(),
+                    self.sideEffects.get(),
+                    self.furtherInfo.get(),
+                    self.bloodPressure.get(),
+                    self.pId.get(),
+                    self.nhsNo.get(),
+                    self.pName.get(),
+                    self.pDOB.get(),
+                    self.age.get(),
+                    self.pAddress.get(),
+                    self.pPostcode.get(),
+                    self.pPhone.get(),
+                    self.pemail.get()
+                ])
+            messagebox.showinfo("Success", "Data saved successfully", parent=self.root)
+            self.fetch_data()
+            self.clear()
+
+    def fetch_data(self):
+        try:
+            with open('hospital_data.csv', mode='r') as file:
+                reader = csv.reader(file)
+                self.hospital_table.delete(*self.hospital_table.get_children())
+                for row in reader:
+                    self.hospital_table.insert("", END, values=row)
+        except FileNotFoundError:
+            open('hospital_data.csv', 'w').close()
+
+    def update_data(self):
+        selected_item = self.hospital_table.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Select a record to update", parent=self.root)
+            return
+
+        index = self.hospital_table.index(selected_item)
+        updated_data = [
+            self.nameOfTablet.get(),
+            self.ref.get(),
+            self.noOfTablets.get(),
+            self.dose.get(),
+            self.lot.get(),
+            self.issueDate.get(),
+            self.expDate.get(),
+            self.dailyDose.get(),
+            self.sideEffects.get(),
+            self.furtherInfo.get(),
+            self.bloodPressure.get(),
+            self.pId.get(),
+            self.nhsNo.get(),
+            self.pName.get(),
+            self.pDOB.get(),
+            self.age.get(),
+            self.pAddress.get(),
+            self.pPostcode.get(),
+            self.pPhone.get(),
+            self.pemail.get()
+        ]
+
+        with open('hospital_data.csv', mode='r') as file:
+            rows = list(csv.reader(file))
+
+        rows[index] = updated_data
+
+        with open('hospital_data.csv', mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(rows)
+
+        messagebox.showinfo("Success", "Data updated successfully", parent=self.root)
+        self.fetch_data()
+        self.clear()
+
+    def delete_data(self):
+        selected_item = self.hospital_table.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Select a record to delete", parent=self.root)
+            return
+
+        index = self.hospital_table.index(selected_item)
+
+        with open('hospital_data.csv', mode='r') as file:
+            rows = list(csv.reader(file))
+
+        del rows[index]
+
+        with open('hospital_data.csv', mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(rows)
+
+        messagebox.showinfo("Success", "Data deleted successfully", parent=self.root)
+        self.fetch_data()
+        self.clear()
+
+    def clear(self):
+        self.nameOfTablet.set("")
+        self.ref.set("")
+        self.noOfTablets.set(0)
+        self.pDOB.set("")
+        self.dose.set("")
+        self.lot.set("")
+        self.issueDate.set("")
+        self.expDate.set("")
+        self.dailyDose.set("")
+        self.sideEffects.set("")
+        self.furtherInfo.set("")
+        self.pName.set("")
+        self.pId.set("")
+        self.age.set(0)
+        self.pAddress.set("")
+        self.nhsNo.set("")
+        self.pPostcode.set("")
+        self.pPhone.set("")
+        self.pemail.set("")
+        self.bloodPressure.set("")
+        self.txtPrprescription.delete(1.0, END)
+
+    def on_item_double_click(self, event):
+        selected_item = self.hospital_table.selection()[0]
+        item_data = self.hospital_table.item(selected_item, 'values')
+
+        fields = [
+            self.nameOfTablet, self.ref, self.noOfTablets, self.dose, self.lot, self.issueDate, self.expDate,
+            self.dailyDose, self.sideEffects, self.furtherInfo, self.bloodPressure, self.pId, self.nhsNo,
+            self.pName, self.pDOB, self.age, self.pAddress, self.pPostcode, self.pPhone, self.pemail
+        ]
+
+        for var, value in zip(fields, item_data):
+            var.set(value)
+
+        prescription_text = "\n".join(f"{lbl}: {var.get()}" for lbl, var in zip(
+            ["Tablet Name", "Ref", "No of Tablets", "Dose", "Lot", "Issue Date", "Exp Date", "Daily Dose",
+             "Side Effects", "Further Info", "Blood Pressure", "Patient ID", "NHS No", "Patient Name", "DOB",
+             "Age", "Address", "Postcode", "Phone", "Email"], fields))
+
+        self.txtPrprescription.delete(1.0, END)
+        self.txtPrprescription.insert(END, prescription_text)
+
+
+# ✅ Correct main entry point
+if __name__ == "__main__":
+    root = Tk()
+    app = Hospital(root)
+    root.mainloop()
